@@ -1,0 +1,15 @@
+body .layer-ext-ljy .layui-layer-title{
+    color: transparent;
+    border: 0px;
+    display: none;
+}
+body .layui-ext-ljy .layui-layer-btn{}
+body .layui-ext-ljy .layui-layer-btn a{}
+.layer-ext-ljy{
+    background-color: transparent;
+    box-shadow: none;
+    border: none;
+    /* 弹窗四周圆角，并裁掉 iframe 的直角 */
+    border-radius: 14px;
+    overflow: hidden;
+}
