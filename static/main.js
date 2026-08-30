@@ -83,10 +83,10 @@ fetchTimeout(hitokoto_api, 8000)
     { name: "烟火里的尘埃", artist: "华晨宇", pic: "./static/covers/烟火里的尘埃.jpg", url: "./static/music/烟火里的尘埃.mp3" },
     { name: "高飞", artist: "张杰", pic: "./static/covers/高飞.jpg", lrcUrl: "https://api.injahow.cn/meting/?server=netease&type=lrc&id=191024", url: "./static/music/高飞.mp3" },
     { name: "红色高跟鞋 (DJ混搭)", artist: "DJ阿可", pic: "./static/covers/DJ阿可-红色高跟鞋-DJ混搭.jpg", url: "./static/music/DJ阿可-红色高跟鞋-DJ混搭.mp3" },
-    { name: "失控 (DJ版)", artist: "井迪", pic: "./static/covers/井迪-失控-DJ版.jpg", lrcName: "失控", lrcArtist: "井迪", url: "./static/music/井迪-失控-DJ版.mp3" },
+    { name: "失控 (DJ版)", artist: "井迪", pic: "./static/covers/井迪-失控-DJ版.jpg", url: "./static/music/井迪-失控-DJ版.mp3" },
     { name: "苦茶子", artist: "路易斯", pic: "./static/covers/路易斯-苦茶子.jpg", lrcUrl: "./static/lyrics/苦茶子.lrc", url: "./static/music/路易斯-苦茶子.mp3" },
-    { name: "雨爱 (DJ版)", artist: "阿黛", pic: "./static/covers/阿黛-雨爱-DJ版.jpg", lrcName: "雨爱", lrcArtist: "杨丞琳", url: "./static/music/阿黛-雨爱-DJ版.mp3" },
-    { name: "忘川彼岸 (DJ名龙版)", artist: "零一九零贰", pic: "./static/covers/零一九零贰-忘川彼岸-DJ名龙版.jpg", lrcName: "忘川彼岸", lrcArtist: "零一九零贰", url: "./static/music/零一九零贰-忘川彼岸-DJ名龙版.mp3" },
+    { name: "雨爱 (DJ版)", artist: "阿黛", pic: "./static/covers/阿黛-雨爱-DJ版.jpg", url: "./static/music/阿黛-雨爱-DJ版.mp3" },
+    { name: "忘川彼岸 (DJ名龙版)", artist: "零一九零贰", pic: "./static/covers/零一九零贰-忘川彼岸-DJ名龙版.jpg", url: "./static/music/零一九零贰-忘川彼岸-DJ名龙版.mp3" },
     { name: "只对你有感觉", artist: "飞轮海、田馥甄", pic: "./static/covers/飞轮海田馥甄-只对你有感觉.jpg", lrcName: "只对你有感觉", lrcArtist: "飞轮海", url: "./static/music/飞轮海田馥甄-只对你有感觉.mp3" },
   ];
   var DEFAULT_COVER = "./static/images/default-cover.svg";
