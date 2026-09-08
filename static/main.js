@@ -531,6 +531,7 @@ fetchTimeout(hitokoto_api, 8000)
   var bgLayerB = mkBgLayer();
   var front = null; // 当前不透明层
   var currentBgUrl = ""; // 当前壁纸的最终(稳定)URL，用于下载
+  var currentBgImg = null; // 当前壁纸对应的已加载 Image 对象：下载直接从它画，保证字节一致
   // ===== 换壁纸：随机图源 + 方向校验自动跳过 =====
   // 壁纸经 serve.py 的同源代理(/wallpaper)加载并缓存，展示层与"下载"共用同一份字节；
   // 部署到无代理的静态托管时自动回退直连。
@@ -582,21 +583,38 @@ fetchTimeout(hitokoto_api, 8000)
     var qi = 0;
     var everLoaded = false;
     var lastLoaded = "";
+    var lastLoadedImg = null;
+    var corsPass = true; // 第一遍必须 CORS 加载成功（保证可下载）；全失败降级为普通显示
     (function step() {
       if (qi >= seq.length) {
-        // 队列耗尽
-        if (!everLoaded) showBgFailTip(); // 全部加载失败
-        else if (!front) showBg(lastLoaded); // 首屏仍空白：凑合显示最后一张，避免空屏
+        if (corsPass && !everLoaded) {
+          // CORS 全军覆没：降级为普通加载再试一轮（能显示壁纸，但下载不可用）
+          corsPass = false;
+          qi = 0;
+          step();
+          return;
+        }
+        if (!everLoaded) showBgFailTip(); // 连普通加载也全失败
+        else if (!front) {
+          showBg(lastLoaded); // 首屏仍空白：凑合显示最后一张，避免空屏
+          currentBgImg = lastLoadedImg;
+        }
         return;
       }
       var u = seq[qi++];
       var img = new Image();
+      // 声明 CORS 加载：图床允许跨域才能把这张图缓存下来供"下载当前壁纸"导出，
+      // 不允许 CORS 的图源在第一遍会被跳过；第二遍（降级）则不声明，保证至少有壁纸显示
+      if (corsPass) img.crossOrigin = "anonymous";
       img.onload = function () {
         if (run !== bgRun) return; // 已被更新的换图取代
         everLoaded = true;
         lastLoaded = u;
-        if (bgFitsScreen(img.naturalWidth, img.naturalHeight)) showBg(u);
-        else step(); // 方向不对 → 试下一张
+        lastLoadedImg = corsPass ? img : null; // 降级加载的图无法导出，不缓存
+        if (bgFitsScreen(img.naturalWidth, img.naturalHeight)) {
+          showBg(u);
+          currentBgImg = corsPass ? img : null;
+        } else step(); // 方向不对 → 试下一张
       };
       img.onerror = function () {
         if (run === bgRun) step(); // 加载失败 → 试下一张
@@ -625,37 +643,38 @@ fetchTimeout(hitokoto_api, 8000)
     panel.classList.remove("open");
   });
 
-  // 下载当前壁纸：currentBgUrl 是经 serve.py 代理的同源地址，fetch 能拿到与展示完全相同的字节；
-  // 若在无代理的静态托管上则回退为新标签页打开
-  function getCurrentBgUrl() {
-    return currentBgUrl;
-  }
+  // 下载当前壁纸：直接从预载时缓存的 Image 对象画到 canvas 导出，
+  // 导出的就是屏幕上这一张（不重新请求随机图 API，不跳转外部页面）；
+  // 图床不允许 CORS 的壁纸在预载阶段就被跳过，所以不会出现"下载失败"态
   function downloadBg() {
-    var url = getCurrentBgUrl();
-    if (!url) return;
-    fetch(url)
-      .then(function (r) {
-        if (!r.ok) throw new Error("http " + r.status);
-        return r.blob();
-      })
-      .then(function (blob) {
-        var ext = (blob.type || "").split("/")[1] || "jpg";
-        if (ext === "jpeg") ext = "jpg";
+    var img = currentBgImg;
+    if (!img || !img.naturalWidth) {
+      // 壁纸是以降级方式（无 CORS）显示的，无法导出为文件
+      if (window.layer) layer.msg("当前壁纸的图源不允许跨域读取，暂不支持下载");
+      return;
+    }
+    var canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    canvas.getContext("2d").drawImage(img, 0, 0);
+    try {
+      canvas.toBlob(function (blob) {
+        if (!blob) return;
         var obj = URL.createObjectURL(blob);
         var a = document.createElement("a");
         a.href = obj;
-        a.download = "wallpaper-" + Date.now() + "." + ext;
+        a.download = "wallpaper-" + Date.now() + ".png";
         document.body.appendChild(a);
         a.click();
         a.remove();
         setTimeout(function () {
           URL.revokeObjectURL(obj);
         }, 3000);
-      })
-      .catch(function () {
-        // 无代理(静态托管)且图源跨域时：新标签页打开，用户可右键"图片另存为"
-        window.open(url, "_blank");
-      });
+      }, "image/png");
+    } catch (e) {
+      // 极端兜底：canvas 被污染（理论上不会发生，因为预载已声明 crossOrigin）
+      console.warn("wallpaper export failed:", e);
+    }
   }
   var downloadBgBtn = document.getElementById("btn-download-bg");
   if (downloadBgBtn) {
