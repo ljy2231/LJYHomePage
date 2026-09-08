@@ -520,7 +520,6 @@ fetchTimeout(hitokoto_api, 8000)
     return isMobile() ? BG_LIST_MOBILE : BG_LIST;
   }
   var bgIdx = 0;
-  var bgFailCount = 0;
   function mkBgLayer() {
     var el = document.createElement("div");
     el.style.cssText =
@@ -530,29 +529,88 @@ fetchTimeout(hitokoto_api, 8000)
   }
   var bgLayerA = mkBgLayer();
   var bgLayerB = mkBgLayer();
-  var front = null; // 当前不透明层；初始显示 html 底图
+  var front = null; // 当前不透明层
+  var currentBgUrl = ""; // 当前壁纸的最终(稳定)URL，用于下载
+  // ===== 换壁纸：随机图源 + 方向校验自动跳过 =====
+  // 壁纸经 serve.py 的同源代理(/wallpaper)加载并缓存，展示层与"下载"共用同一份字节；
+  // 部署到无代理的静态托管时自动回退直连。
+  var bgProxyKey = Math.random().toString(36).slice(2); // 页面级 token：刷新换 key，刷新仍是"换新图"
+  var bgSalt = 0; // 递增盐：同一次换图内每多试一张，就生成一个新代理地址 → serve.py 重新抓随机图
+  var bgRun = 0; // 换图批次号：防止上一次的异步加载把更新的结果覆盖掉
+  function bgUrlFor(entry) {
+    return "/wallpaper?src=" + encodeURIComponent(entry) + "&k=" + bgProxyKey + "-" + bgSalt++;
+  }
+  // 图片方向与屏幕方向是否匹配：横屏屏配横图、竖屏屏配竖图；
+  // 接近正方形(比例差<12%)的图或屏幕两边都能接受
+  function bgFitsScreen(w, h) {
+    if (!w || !h) return true; // 拿不到尺寸就不挑方向
+    var s = window.innerWidth / window.innerHeight;
+    var i = w / h;
+    if (Math.abs(s - 1) < 0.12 || Math.abs(i - 1) < 0.12) return true;
+    return (w >= h) === (s >= 1);
+  }
+  function showBg(url) {
+    var target = front === bgLayerA ? bgLayerB : bgLayerA;
+    target.style.backgroundImage = "url('" + url + "')";
+    void target.offsetHeight; // 强制回流，让 opacity 过渡生效
+    target.style.opacity = "1";
+    if (front) front.style.opacity = "0";
+    front = target;
+    currentBgUrl = url;
+  }
+  function showBgFailTip() {
+    var tip = document.getElementById("bg-fail-tip");
+    if (tip) tip.style.display = "block";
+  }
+  var MAX_TRY_SAME = 4; // 同一轮每个图源最多尝试次数
+  var TRY_BUDGET = 12; // 单次换图总尝试上限(含换源)，防止无限轮询
+  // 换一张壁纸：从 bgIdx 指向的图源开始，把"每源最多 MAX_TRY_SAME 次"排成候选队列，
+  // 逐张预载；方向不匹配或加载失败就换下一张(每个代理地址都是新随机图)，
+  // 直到出现方向合适的一张；队列耗尽则保持原壁纸(全加载失败才提示)
+  function loadBg() {
+    var run = ++bgRun;
+    var list = bgListNow();
+    var seq = [];
+    for (var r = 0; r < MAX_TRY_SAME && seq.length < TRY_BUDGET; r++) {
+      for (var s = 0; s < list.length && seq.length < TRY_BUDGET; s++) {
+        var src = list[(bgIdx + s) % list.length];
+        seq.push(bgUrlFor(src)); // 优先走同源代理(新 salt → 新随机图)
+        seq.push(src); // 直连兜底(纯静态托管/代理异常场景)
+      }
+    }
+    seq = seq.slice(0, TRY_BUDGET);
+    var qi = 0;
+    var everLoaded = false;
+    var lastLoaded = "";
+    (function step() {
+      if (qi >= seq.length) {
+        // 队列耗尽
+        if (!everLoaded) showBgFailTip(); // 全部加载失败
+        else if (!front) showBg(lastLoaded); // 首屏仍空白：凑合显示最后一张，避免空屏
+        return;
+      }
+      var u = seq[qi++];
+      var img = new Image();
+      img.onload = function () {
+        if (run !== bgRun) return; // 已被更新的换图取代
+        everLoaded = true;
+        lastLoaded = u;
+        if (bgFitsScreen(img.naturalWidth, img.naturalHeight)) showBg(u);
+        else step(); // 方向不对 → 试下一张
+      };
+      img.onerror = function () {
+        if (run === bgRun) step(); // 加载失败 → 试下一张
+      };
+      img.src = u;
+    })();
+  }
   function switchBg() {
     var list = bgListNow();
     bgIdx = (bgIdx + 1) % list.length;
-    var url = list[bgIdx];
-    var img = new Image();
-    img.onload = function () {
-      // 新图已就绪：另一层载入新图并淡入，旧层淡出
-      bgFailCount = 0;
-      var target = front === bgLayerA ? bgLayerB : bgLayerA;
-      target.style.backgroundImage = "url('" + url + "')";
-      void target.offsetHeight;
-      target.style.opacity = "1";
-      if (front) front.style.opacity = "0";
-      front = target;
-    };
-    img.onerror = function () {
-      // 这张加载失败：尝试下一个，最多轮完一圈
-      bgFailCount++;
-      if (bgFailCount < bgListNow().length) switchBg();
-    };
-    img.src = url;
+    loadBg();
   }
+  // 首屏壁纸走同一套加载(同样校验方向)，保证当前这张也可精确下载
+  loadBg();
 
   document.getElementById("btn-bg").addEventListener("click", function () {
     switchBg();
@@ -566,6 +624,46 @@ fetchTimeout(hitokoto_api, 8000)
     if (window.reloadWhale) window.reloadWhale();
     panel.classList.remove("open");
   });
+
+  // 下载当前壁纸：currentBgUrl 是经 serve.py 代理的同源地址，fetch 能拿到与展示完全相同的字节；
+  // 若在无代理的静态托管上则回退为新标签页打开
+  function getCurrentBgUrl() {
+    return currentBgUrl;
+  }
+  function downloadBg() {
+    var url = getCurrentBgUrl();
+    if (!url) return;
+    fetch(url)
+      .then(function (r) {
+        if (!r.ok) throw new Error("http " + r.status);
+        return r.blob();
+      })
+      .then(function (blob) {
+        var ext = (blob.type || "").split("/")[1] || "jpg";
+        if (ext === "jpeg") ext = "jpg";
+        var obj = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = obj;
+        a.download = "wallpaper-" + Date.now() + "." + ext;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () {
+          URL.revokeObjectURL(obj);
+        }, 3000);
+      })
+      .catch(function () {
+        // 无代理(静态托管)且图源跨域时：新标签页打开，用户可右键"图片另存为"
+        window.open(url, "_blank");
+      });
+  }
+  var downloadBgBtn = document.getElementById("btn-download-bg");
+  if (downloadBgBtn) {
+    downloadBgBtn.addEventListener("click", function () {
+      downloadBg();
+      panel.classList.remove("open");
+    });
+  }
 })();
 
 // 本站运行时长（实时跳动 + 加载后从 0 滚动到真实值）

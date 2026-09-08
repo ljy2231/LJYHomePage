@@ -65,20 +65,83 @@
   readConfig();
   applyControls();
 
-  // 音效
+  // 音效：按压/松开两声改成"顺序播放"——先完整播完第一声(按压声)，放完后再紧接着放第二声(松开声)，
+  // 两者不重叠。元素复用并预加载，保证即便快速连按每一声都就绪；松开声会排队等第一声 ended 再播。
   function snds() {
     if (soundSet === "fx1") return ["D1.mp3", "D2.mp3"];
     if (soundSet === "steel") return ["Gang1.mp3", null]; // 钢管落地：只摁下响，松开不响
     return ["Ya1.mp3", "Ya2.mp3"];
   }
+  var audioPool = {}; // 按文件名缓存 Audio 元素
+  function ensureAudio(f) {
+    var a = audioPool[f];
+    if (!a) {
+      a = audioPool[f] = new Audio("./static/sounds/" + f);
+      a.preload = "auto";
+    }
+    return a;
+  }
+  function preloadSounds() {
+    snds().forEach(function (f) {
+      if (f) {
+        var a = ensureAudio(f);
+        if (a.readyState < 2) a.load(); // HAVE_CURRENT_DATA 以下才真正去加载
+      }
+    });
+  }
+  function playNow(el) {
+    if (!el) return;
+    el.volume = vol;
+    try {
+      el.currentTime = 0; // 允许同一个元素被快速重复触发
+    } catch (e) {}
+    var p = el.play();
+    if (p && p.catch) p.catch(function () {});
+  }
+  var firstEl = null; // 当前这一轮"按压声"的元素
+  var pendingEndFn = null; // 挂在按压声上、用于触发松开声的 ended 处理器
+  function cancelPendingSecond() {
+    if (firstEl && pendingEndFn) firstEl.removeEventListener("ended", pendingEndFn);
+    pendingEndFn = null;
+  }
+  function playSecond(second) {
+    var first = firstEl;
+    function go() {
+      cancelPendingSecond();
+      firstEl = null;
+      playNow(second); // 第一声放完，紧接着放第二声
+    }
+    if (!first) {
+      go();
+      return;
+    }
+    if (first.ended) {
+      // 第一声早已放完（如长按后才松手）：直接放第二声
+      go();
+      return;
+    }
+    // 第一声仍在播放/尚未开始：排队等它 ended 后再放第二声
+    cancelPendingSecond();
+    pendingEndFn = go;
+    first.addEventListener("ended", go, { once: true });
+  }
   function playSound(which) {
+    if (vol <= 0) return;
     var f = snds()[which];
     if (!f) return; // 松开不响
-    if (vol <= 0) return;
-    var a = new Audio("./static/sounds/" + f);
-    a.volume = vol;
-    a.play().catch(function () {});
+    var el = ensureAudio(f);
+    if (which === 0) {
+      // 新一次"按压"：丢弃上一轮遗留的"松开排队"，从头播按压声
+      cancelPendingSecond();
+      firstEl = el;
+      playNow(el);
+    } else {
+      // 松开：排在按压声之后播放
+      playSecond(el);
+    }
   }
+  // 一开始就预载当前音效对，保证每一声都"就绪"
+  preloadSounds();
 
   // 气泡
   var hideTimer = null;
@@ -217,6 +280,7 @@
   });
   soundSelect.addEventListener("change", function () {
     soundSet = soundSelect.value;
+    preloadSounds(); // 换音效后预载新的一组
     saveConfig();
   });
   volInput.addEventListener("input", function () {
