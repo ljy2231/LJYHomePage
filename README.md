@@ -94,7 +94,8 @@ location ^~ /api/data/ {
 │   ├── music/          本地 mp3
 │   ├── lyrics/         本地歌词文件
 │   ├── covers/         歌曲封面
-│   └── sounds/         小鲸鱼音效
+│   ├── sounds/         小鲸鱼音效
+│   └── fonts/          气泡字体子集（MiSans Bold）
 ```
 
 ## 说明
@@ -102,6 +103,7 @@ location ^~ /api/data/ {
 - 歌词来自 [LRCLIB](https://lrclib.net)（免费歌词库），部分歌曲歌词来自网易云歌词代理接口。
 - 仓库内音乐文件版权归原作者所有，仅用于个人学习与展示，请勿用于商业用途。
 - 背景图来自公共随机图床，版权归原画师/图床所有。
+- 气泡字体为 MiSans Bold 的 unicode-range 子集（来源 npm `misans`，OFL 协议），仅包含现有台词用到的字符；新增台词若出现缺字，会回退到系统黑体。
 - 部分代码由 AI 编写。
 
 ## License
