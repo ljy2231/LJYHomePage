@@ -305,7 +305,7 @@ footer p {
     border: 1px solid rgba(44, 95, 138, 0.3);
     border-left: none;
     border-radius: 0 19px 19px 0;
-    background: rgba(191, 224, 245, 0.9);
+    background: #ffffff;
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
     color: #2c5f8a;
