@@ -484,11 +484,16 @@ footer p {
 }
 
 /* 台词气泡（原项目风格：描边云朵 + 分段弹出动画） */
+/* 气泡宽度随窗口缩放，字号按宽度等比计算（14/260 ≈ 5.38%），保证文字始终在椭圆内 */
+#whale {
+    --bubble-w: clamp(230px, 19vw, 300px);
+}
+
 #whale-bubble {
     position: absolute;
     bottom: 84%;
     right: 12px;
-    width: 260px;
+    width: var(--bubble-w);
     aspect-ratio: 1026 / 700;
     z-index: 10;
     pointer-events: none;
@@ -563,7 +568,7 @@ footer p {
     color: #3f56a3;
     font-family: "MiSans Bubble", "HarmonyOS Sans SC", "MiSans", "PingFang SC", "Hiragino Sans GB",
         "Source Han Sans SC", "Noto Sans SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
-    font-size: 14px;
+    font-size: calc(var(--bubble-w) * 0.0538);
     font-weight: 600;
     letter-spacing: 0;
     line-height: 1.55;
