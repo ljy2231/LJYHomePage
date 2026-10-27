@@ -251,13 +251,15 @@ footer p {
     width: 290px;
     max-width: calc(100% - 24px);
     background: rgba(191, 224, 245, 0.2);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
     border: 1px solid rgba(44, 95, 138, 0.25);
     border-radius: 12px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
     padding: 10px 14px;
-    color: #2c5f8a;
+    color: #123a5f;
+    text-shadow: 0 0 3px rgba(255, 255, 255, 0.95), 0 0 8px rgba(255, 255, 255, 0.7),
+        0 1px 2px rgba(255, 255, 255, 0.9);
     /* 初始藏在屏幕上方，有歌词时滑下来 */
     transform: translateY(calc(-100% - 30px));
     transition: transform 0.6s cubic-bezier(0.22, 0.8, 0.36, 1);
@@ -362,22 +364,22 @@ footer p {
 /* 固定梯度：中间最深，向两边渐浅 */
 #lyrics-p2 {
     transform: translateY(-48px);
-    opacity: 0.3;
+    opacity: 0.45;
 }
 
 #lyrics-n2 {
     transform: translateY(48px);
-    opacity: 0.3;
+    opacity: 0.45;
 }
 
 #lyrics-p1 {
     transform: translateY(-24px);
-    opacity: 0.6;
+    opacity: 0.78;
 }
 
 #lyrics-n1 {
     transform: translateY(24px);
-    opacity: 0.6;
+    opacity: 0.78;
 }
 
 #lyrics-cur {
