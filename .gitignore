@@ -11,6 +11,9 @@ __pycache__/
 api/data/
 data/
 
+# 字体分片缓存
+.cache/
+
 # 编辑器
 .vscode/
 .idea/

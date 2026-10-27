@@ -552,8 +552,8 @@ footer p {
 
 #whale-bubble .wb-text {
     position: absolute;
-    left: 11%;
-    right: 23%;
+    left: 14%;
+    right: 26%;
     top: 8%;
     bottom: 30%;
     display: flex;
@@ -571,6 +571,7 @@ footer p {
     transition: opacity 0.16s ease 0.36s;
     white-space: pre-wrap;
     word-break: break-word;
+    text-wrap: balance;
     overflow: hidden;
     pointer-events: none;
 }
