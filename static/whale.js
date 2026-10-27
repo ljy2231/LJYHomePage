@@ -143,6 +143,11 @@
   // 一开始就预载当前音效对，保证每一声都"就绪"
   preloadSounds();
 
+  // 预载气泡字体（15KB 子集）：首次弹气泡前就绪，避免"字先出来再变字体"
+  if (document.fonts && document.fonts.load) {
+    document.fonts.load('700 16px "MiSans Bubble"', phrases.join("")).catch(function () {});
+  }
+
   // 气泡
   var hideTimer = null;
   function pick() {
@@ -150,10 +155,19 @@
   }
   function showBubble() {
     if (!bubbleOn) return;
-    if (bubbleText) bubbleText.textContent = pick();
-    bubble.classList.add("show");
-    if (hideTimer) clearTimeout(hideTimer);
-    hideTimer = setTimeout(hideBubble, 5000);
+    var text = pick();
+    function present() {
+      if (bubbleText) bubbleText.textContent = text;
+      bubble.classList.add("show");
+      if (hideTimer) clearTimeout(hideTimer);
+      hideTimer = setTimeout(hideBubble, 5000);
+    }
+    // 等字体就绪再显示，避免气泡先弹出、文字后到（子集只有 15KB，通常已预载完成）
+    if (document.fonts && document.fonts.load) {
+      document.fonts.load('600 14px "MiSans Bubble"', text).then(present, present);
+    } else {
+      present();
+    }
   }
   function hideBubble() {
     if (hideTimer) {
