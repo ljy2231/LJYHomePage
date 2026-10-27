@@ -523,7 +523,7 @@ function isMobile() {
   initMusic();
 })();
 
-// 右上角设置（齿轮按钮 + 面板：换背景 / 重载歌曲 / 重载小鲸鱼）
+// 右上角设置（齿轮按钮 + 面板：换背景 / 重载歌曲 / 下载壁纸）
 (function () {
   var box = document.getElementById("settings");
   var btn = document.getElementById("settings-btn");
@@ -671,10 +671,6 @@ function isMobile() {
   });
   document.getElementById("btn-reload-music").addEventListener("click", function () {
     if (window.reloadMusic) window.reloadMusic();
-    panel.classList.remove("open");
-  });
-  document.getElementById("btn-reload-whale").addEventListener("click", function () {
-    if (window.reloadWhale) window.reloadWhale();
     panel.classList.remove("open");
   });
 
