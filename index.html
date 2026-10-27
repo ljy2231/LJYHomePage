@@ -86,11 +86,10 @@
 
                 <footer>
                     <p>
+                        <!-- 访问计数：同源接口 api/counter.php，无后端时自动隐藏 -->
                         <span class="fade-line" style="display: block; animation-delay: 3.2s;">
-                            <span id="busuanzi_container_site_pv" style="display:none;">本站总访问量 <span
-                                    id="busuanzi_value_site_pv"></span> 次</span>
-                            <span id="busuanzi_container_site_uv" style="display:none;"> · 访客数 <span
-                                    id="busuanzi_value_site_uv"></span> 人</span>
+                            <span id="site-pv" style="display:none;">本站总访问量 <span id="site-pv-num">0</span> 次</span><span
+                                id="site-uv" style="display:none;"> · 访客数 <span id="site-uv-num">0</span> 人</span>
                         </span>
                         <span class="fade-line" style="display: block; animation-delay: 4s;">
                             本站已运行 <span id="run-days">0</span> 天 <span id="run-hours">0</span> 小时 <span
@@ -98,6 +97,7 @@
                         </span>
                         <span class="fade-line" style="display: block; animation-delay: 4.8s;">
                             Copyright 2026
+                            <a href="http://beian.miit.gov.cn/" target="_blank" rel="noopener">鲁ICP备2026026261号-2</a>
                         </span>
                     </p>
                 </footer>
@@ -224,9 +224,6 @@
 
     <script src="https://cdn.staticfile.org/jquery/3.2.1/jquery.min.js"></script>
     <script src="./static/layer-v3.5.1/layer/layer.js"></script>
-
-    <!-- 不蒜子访客统计 -->
-    <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 
     <script src="./static/main.js"></script>
     <script src="./static/whale.js"></script>

@@ -61,15 +61,62 @@ function isMobile() {
   return window.innerWidth <= 767;
 }
 
-// 一言（8 秒超时）
-fetchTimeout(hitokoto_api, 8000)
-  .then((response) => response.json())
-  .then((data) => {
-    const hitokoto = document.getElementById("hitokoto_text");
-    hitokoto.href = "https://hitokoto.cn/?uuid=" + data.uuid;
-    hitokoto.innerText = data.hitokoto;
-  })
-  .catch(console.error);
+// 一言（3 秒超时；当天成功结果写入 localStorage，失败用缓存或本地兜底，避免一直停在"获取中"）
+(function () {
+  var el = document.getElementById("hitokoto_text");
+  if (!el) return;
+  var KEY = "hitokoto_cache_v1";
+  var FALLBACK = "我之所以想变强，是为了活得轻松写意。";
+  function apply(txt, uuid) {
+    el.innerText = txt;
+    if (uuid) el.href = "https://hitokoto.cn/?uuid=" + uuid;
+  }
+  function useCache() {
+    try {
+      var c = JSON.parse(localStorage.getItem(KEY) || "null");
+      if (c && c.t && Date.now() - c.ts < 86400000) {
+        apply(c.t, c.u);
+        return true;
+      }
+    } catch (e) {}
+    return false;
+  }
+  fetchTimeout(hitokoto_api, 3000)
+    .then(function (r) {
+      return r.json();
+    })
+    .then(function (d) {
+      if (!d || !d.hitokoto) throw new Error("empty hitokoto");
+      apply(d.hitokoto, d.uuid);
+      try {
+        localStorage.setItem(KEY, JSON.stringify({ t: d.hitokoto, u: d.uuid, ts: Date.now() }));
+      } catch (e) {}
+    })
+    .catch(function () {
+      if (!useCache()) apply(FALLBACK, "");
+    });
+})();
+
+// 访问计数（同源 api/counter.php；纯静态托管没有该接口时静默隐藏，不报错）
+(function () {
+  var pvBox = document.getElementById("site-pv");
+  if (!pvBox) return;
+  fetchTimeout("api/counter.php", 4000)
+    .then(function (r) {
+      return r.ok ? r.json() : null;
+    })
+    .then(function (d) {
+      if (!d || typeof d.pv !== "number") return;
+      var pvNum = document.getElementById("site-pv-num");
+      var uvNum = document.getElementById("site-uv-num");
+      var uvBox = document.getElementById("site-uv");
+      if (pvNum) pvNum.textContent = d.pv;
+      if (uvNum) uvNum.textContent = d.uv;
+      pvBox.style.display = "";
+      if (uvBox) uvBox.style.display = "";
+    })
+    .catch(function () {});
+})();
 
 // 音乐播放器（自绘样式，数据来自 meting API：api.injahow.cn）
 (function () {
@@ -82,11 +129,7 @@ fetchTimeout(hitokoto_api, 8000)
     { name: "樱花樱花想见你", artist: "李蚊香/满汉全席", pic: "./static/covers/樱花樱花想见你.jpg", lrcUrl: "https://api.injahow.cn/meting/?server=netease&type=lrc&id=440241194", url: "./static/music/樱花樱花想见你.mp3" },
     { name: "烟火里的尘埃", artist: "华晨宇", pic: "./static/covers/烟火里的尘埃.jpg", url: "./static/music/烟火里的尘埃.mp3" },
     { name: "高飞", artist: "张杰", pic: "./static/covers/高飞.jpg", lrcUrl: "https://api.injahow.cn/meting/?server=netease&type=lrc&id=191024", url: "./static/music/高飞.mp3" },
-    { name: "红色高跟鞋 (DJ混搭)", artist: "DJ阿可", pic: "./static/covers/DJ阿可-红色高跟鞋-DJ混搭.jpg", url: "./static/music/DJ阿可-红色高跟鞋-DJ混搭.mp3" },
-    { name: "失控 (DJ版)", artist: "井迪", pic: "./static/covers/井迪-失控-DJ版.jpg", url: "./static/music/井迪-失控-DJ版.mp3" },
     { name: "苦茶子", artist: "路易斯", pic: "./static/covers/路易斯-苦茶子.jpg", lrcUrl: "./static/lyrics/苦茶子.lrc", url: "./static/music/路易斯-苦茶子.mp3" },
-    { name: "雨爱 (DJ版)", artist: "阿黛", pic: "./static/covers/阿黛-雨爱-DJ版.jpg", url: "./static/music/阿黛-雨爱-DJ版.mp3" },
-    { name: "忘川彼岸 (DJ名龙版)", artist: "零一九零贰", pic: "./static/covers/零一九零贰-忘川彼岸-DJ名龙版.jpg", url: "./static/music/零一九零贰-忘川彼岸-DJ名龙版.mp3" },
     { name: "只对你有感觉", artist: "飞轮海、田馥甄", pic: "./static/covers/飞轮海田馥甄-只对你有感觉.jpg", lrcName: "只对你有感觉", lrcArtist: "飞轮海", url: "./static/music/飞轮海田馥甄-只对你有感觉.mp3" },
   ];
   var DEFAULT_COVER = "./static/images/default-cover.svg";
@@ -505,17 +548,9 @@ fetchTimeout(hitokoto_api, 8000)
   });
 
   // 更换背景图：双背景层交替交叉淡化（手机端用竖版图源）
-  var BG_LIST = [
-    "https://t.alcy.cc/pc",
-    "https://api.anosu.top/img",
-    "https://www.dmoe.cc/random.php",
-    "https://api.paugram.com/wallpaper/?source=acg",
-  ];
-  var BG_LIST_MOBILE = [
-    "https://t.alcy.cc/mp",
-    "https://api.anosu.top/img",
-    "https://www.dmoe.cc/random.php",
-  ];
+  // 图源统一为 t.alcy.cc：PC 端 ycy、移动端 mp；其余第三方图床已全部移除
+  var BG_LIST = ["https://t.alcy.cc/ycy"];
+  var BG_LIST_MOBILE = ["https://t.alcy.cc/mp"];
   function bgListNow() {
     return isMobile() ? BG_LIST_MOBILE : BG_LIST;
   }

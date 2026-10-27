@@ -2,7 +2,7 @@ html, body {
     font-size: 18px;
     color: #6c767d;
     background-color: #ebf1f5;
-    background-image: url("https://bu.dusays.com/2022/06/04/629b0a2a89425.png");
+    /* 原第三方图床占位图（bu.dusays.com，已 404）已移除，首屏背景交由 JS 壁纸层接管 */
     background-attachment: fixed;
     background-repeat: no-repeat;
     background-size: cover;

@@ -7,6 +7,10 @@ Desktop.ini
 __pycache__/
 *.pyc
 
+# 访问计数数据（运行时生成，不入库）
+api/data/
+data/
+
 # 编辑器
 .vscode/
 .idea/

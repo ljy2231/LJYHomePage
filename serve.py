@@ -2,13 +2,22 @@
 """静态服务器：支持 HTTP Range 请求（音频/视频跳转进度必需）
 另提供 /wallpaper 同源壁纸代理(带缓存)，页面据此实现"下载当前壁纸"原图"""
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+import json
 import os
 import re
 import sys
+import threading
+import time
 import urllib.parse
 import urllib.request
+import uuid
 
 PORT = 8000
+
+# /api/counter 访问计数：文件持久化，进程内加锁避免并发写坏
+COUNTER_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "api", "data")
+COUNTER_FILE = os.path.join(COUNTER_DIR, "counter.json")
+_counter_lock = threading.Lock()
 
 # /wallpaper 壁纸代理缓存：key=查询串(含页面 token)，value=(bytes, content_type)
 BG_PROXY_CACHE = {}
@@ -22,7 +31,60 @@ class RangeHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/wallpaper":
             self.handle_wallpaper(parsed)
             return
+        if parsed.path in ("/api/counter", "/api/counter.php"):
+            self.handle_counter()
+            return
+        if parsed.path.startswith("/data/") or parsed.path.startswith("/api/data/"):
+            self.send_error(404, "Not found")  # 不对外暴露计数文件
+            return
         super().do_GET()
+
+    # ---------- 访问计数 ----------
+    @staticmethod
+    def _load_counter():
+        try:
+            with open(COUNTER_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if not isinstance(data, dict):
+                raise ValueError("bad counter file")
+        except (OSError, ValueError):
+            data = {}
+        data["pv"] = int(data.get("pv") or 0)
+        data["uv"] = int(data.get("uv") or 0)
+        data["since"] = data.get("since") or time.strftime("%Y-%m-%d")
+        return data
+
+    @staticmethod
+    def _save_counter(data):
+        os.makedirs(COUNTER_DIR, exist_ok=True)
+        tmp = COUNTER_FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, COUNTER_FILE)  # 原子替换，避免写到一半被读到
+
+    def handle_counter(self):
+        cookie = self.headers.get("Cookie") or ""
+        first_visit = "ljy_uid=" not in cookie
+        with _counter_lock:
+            data = self._load_counter()
+            data["pv"] += 1
+            if first_visit:
+                data["uv"] += 1
+            self._save_counter(data)
+        body = json.dumps(
+            {"pv": data["pv"], "uv": data["uv"], "since": data["since"]}, ensure_ascii=False
+        ).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        if first_visit:
+            self.send_header(
+                "Set-Cookie",
+                "ljy_uid=%s; Max-Age=31536000; Path=/; SameSite=Lax" % uuid.uuid4().hex,
+            )
+        self.end_headers()
+        self.wfile.write(body)
 
     @staticmethod
     def _is_safe_url(url):
